@@ -1,0 +1,70 @@
+name: Bootstrap full course
+
+on:
+  push:
+    paths:
+      - '.github/workflows/bootstrap-course.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Reconstruct exact course archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .bootstrap/chunk* | base64 -d > /tmp/course.zip
+          echo "9fb8a9f19a7f221aaad19f1f3aa6bf921fe216f4e508da1e46cd3b407113d5d8  /tmp/course.zip" | sha256sum -c -
+          rm -rf /tmp/course
+          mkdir -p /tmp/course
+          unzip -q /tmp/course.zip -d /tmp/course
+          rsync -a /tmp/course/deepseek-harness-cn-course/ ./
+
+      - name: Verify extracted project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f README.md
+          test -f package.json
+          test -f docs/.vitepress/config.mts
+          test -f docs/stages/00.md
+          test -f docs/stages/17.md
+          test -f docs/capstones/a-plugin-suite.md
+          test -f docs/capstones/b-provider.md
+          test -f docs/capstones/c-core-change.md
+          test -f docs/mini-harness/index.md
+          test -f docs/exam/graduation.md
+          test -f scripts/verify-curriculum.mjs
+          test -f scripts/verify-links.mjs
+          files="$(find . -type f -not -path './.git/*' -not -path './.github/*' -not -path './.bootstrap/*' | wc -l | tr -d ' ')"
+          echo "course files: $files"
+          test "$files" -eq 41
+          node scripts/verify-curriculum.mjs
+          node scripts/verify-links.mjs
+
+      - name: Commit complete course and remove bootstrap files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .bootstrap
+          rm -f .github/workflows/bootstrap-course.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: publish complete DeepSeek Harness Chinese course"
+          git push origin HEAD:main
