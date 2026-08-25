@@ -16,6 +16,7 @@ export default defineConfig({
   lang: 'zh-CN',
   title: 'DeepSeek Harness 源码学习',
   description: '以源码阅读、插件、Runtime 修改和调试为毕业能力的中文教程',
+  base: '/deepseek-harness-cn-course/',
   cleanUrls: true,
   themeConfig: {
     nav: [
