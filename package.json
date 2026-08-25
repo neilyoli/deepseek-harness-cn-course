@@ -1,0 +1,20 @@
+{
+  "name": "deepseek-harness-cn-course",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DeepSeek Harness 中文源码、插件、运行时与调试课程（冻结到 b150a551）",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "docs:dev": "vitepress docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "verify": "node scripts/verify-curriculum.mjs",
+    "verify:links": "node scripts/verify-links.mjs"
+  },
+  "devDependencies": {
+    "vitepress": "1.6.4"
+  }
+}
