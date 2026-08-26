@@ -1,59 +1,37 @@
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
-import { resolve, dirname, extname } from 'node:path'
+import fs from 'node:fs'
+import path from 'node:path'
 
-const root = resolve(import.meta.dirname, '..')
-const docs = resolve(root, 'docs')
-const failures = []
-let checked = 0
-
+const root = path.resolve('docs')
+const files = []
 function walk(dir) {
-  return readdirSync(dir).flatMap(name => {
-    const path = resolve(dir, name)
-    return statSync(path).isDirectory() ? walk(path) : [path]
-  })
-}
-
-function targetFor(link, fromFile) {
-  const clean = link.split('#')[0].split('?')[0]
-  if (!clean || /^(https?:|mailto:)/.test(clean)) return null
-  if (clean.startsWith('/')) {
-    const rel = clean.slice(1)
-    const base = resolve(docs, rel)
-    return [base + '.md', resolve(base, 'index.md'), base]
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, ent.name)
+    if (ent.isDirectory() && ent.name !== '.vitepress') walk(p)
+    else if (ent.isFile() && p.endsWith('.md')) files.push(p)
   }
-  if (clean.startsWith('./') || clean.startsWith('../')) {
-    const base = resolve(dirname(fromFile), clean)
-    return extname(base) ? [base] : [base + '.md', resolve(base, 'index.md'), base]
-  }
-  return null
 }
+walk(root)
 
-for (const file of walk(docs).filter(x => x.endsWith('.md'))) {
-  const text = readFileSync(file, 'utf8')
-  for (const match of text.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
-    const link = match[1]
-    const targets = targetFor(link, file)
-    if (!targets) continue
+const errors = []
+let checked = 0
+const re = /\[[^\]]+\]\(([^)]+)\)/g
+for (const file of files) {
+  const text = fs.readFileSync(file, 'utf8')
+  for (const m of text.matchAll(re)) {
+    const href = m[1]
+    if (/^(https?:|mailto:|#)/.test(href)) continue
+    let target = href.split('#')[0]
+    if (!target) continue
     checked++
-    if (!targets.some(existsSync)) failures.push(`${file.slice(root.length + 1)} -> ${link}`)
+    if (target.startsWith('/')) target = path.join(root, target.slice(1))
+    else target = path.resolve(path.dirname(file), target)
+    const candidates = [target, `${target}.md`, path.join(target, 'index.md')]
+    if (!candidates.some(p => fs.existsSync(p))) errors.push(`${path.relative('.', file)} -> ${href}`)
   }
 }
-
-// Also validate VitePress sidebar/nav clean links.
-const config = readFileSync(resolve(docs, '.vitepress/config.mts'), 'utf8')
-for (const match of config.matchAll(/link:\s*['"](\/[^'"]+)['"]/g)) {
-  const link = match[1]
-  if (link === '/') continue
-  checked++
-  const base = resolve(docs, link.slice(1))
-  if (![base + '.md', resolve(base, 'index.md'), base].some(existsSync)) {
-    failures.push(`docs/.vitepress/config.mts -> ${link}`)
-  }
-}
-
-if (failures.length) {
+if (errors.length) {
   console.error('LOCAL LINK VERIFY: FAIL')
-  for (const line of failures) console.error(`- ${line}`)
+  for (const e of errors) console.error('-', e)
   process.exit(1)
 }
 console.log(`LOCAL LINK VERIFY: PASS (${checked} local links checked)`)

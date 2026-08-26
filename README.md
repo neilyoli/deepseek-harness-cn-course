@@ -1,56 +1,45 @@
-# DeepSeek Harness 中文源码学习教程
+# DeepSeek Harness 中文学习伴侣
 
-这是一套以“**最终能独立读源码、写插件、替换 Provider、修改 Core、调试 Runtime**”为验收目标的 VitePress 教程项目，而不是 DeepSeek Harness 百科全书。
+这不是 DeepSeek Harness 官方文档的中文重写版。
 
-## 版本基线
+它的用途是：**围绕官方文档学习，补上阅读提示、预测—验证实验、源码定位、故障注入、插件成长路线和能力验收**，最后让你可以脱离这套教程继续读官方文档和源码。
 
-- 研究日期：2026-08-25
+## 事实基线
+
+- 研究日期：2026-08-26
 - Repository：`deepseek-ai/deepseek-harness`
 - Branch：`master`
 - Commit：`b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`
-- CLI：`@deepseek-ai/dsh@0.1.1-rc.2`
+- CLI / package version：`0.1.1-rc.2`
 - Node.js：`^22.19.0 || >=24.0.0`
 - pnpm：`11.7.0`
-- VitePress：`1.6.4`
+- 官方站点：https://deepseek-harness.github.io/deepseek-harness/
 
-> DeepSeek Harness 当前仍处于 developer preview。本教程所有源码路径、API、Event、Service、Profile/Bundle/Patch 行为都以以上 commit 为事实基线。
+DeepSeek Harness 仍是 developer preview。源码事实一律以固定 commit 为锚点；网站链接用于沿官方资料结构学习。
 
-## 本地运行教程站点
+## 推荐入口
+
+1. [学习路线审查](docs/review/learning-route-audit.md)
+2. [当前官方资料地图](docs/research/official-map.md)
+3. [官方文档学习路线](docs/roadmap/index.md)
+4. [第 0 站：先把真实 Harness 跑起来](docs/companion/00-run-real-harness.md)
+
+## 本站约定
+
+- `【源码事实】`：固定 commit 可以直接验证。
+- `【官方事实】`：官方文档明确说明。
+- `【教学解释】`：为理解源码而补的教学层。
+- `【工程推断】`：从实现行为推断出的设计意图，不冒充官方原则。
+- `【版本敏感】`：developer preview 下容易变化。
+- `【待核实】`：证据不足，停止猜测。
+
+## 本地运行
 
 ```bash
-corepack enable
-pnpm install
-pnpm docs:dev
+npm install
+npm run verify
+npm run verify:links
+npm run docs:dev
 ```
 
-构建：
-
-```bash
-pnpm docs:build
-```
-
-课程自身的结构完整性检查不依赖 VitePress：
-
-```bash
-node scripts/verify-curriculum.mjs
-```
-
-## 学习顺序
-
-请不要跳过 `Version Lock → Fact Map → Traceability Matrix → Stage 0…17 → Capstones → Graduation Exam → Mini Harness`。这里的顺序是能力依赖，不是推荐阅读顺序。
-
-## 事实标签
-
-- `【源码事实】`：冻结 commit 中可直接验证。
-- `【官方事实】`：官方文档明确声明。
-- `【教学模型】`：为了建立心智模型而人为构造。
-- `【工程解释】`：基于源码的架构解释。
-- `【版本敏感】`：开发预览阶段可能变化。
-- `【待核实】`：当前证据不足，不补猜。
-
-## 重要限制
-
-当前生成环境没有可用 pnpm，Node 为 22.16.0（低于 Harness 的 22.19 最低要求），同时无法从容器联网安装仓库依赖。因此本交付中：教程项目的结构/内容检查会实际执行；DeepSeek Harness 的 `pnpm install/typecheck/test/build`、VitePress dependency install/build、真实 Lab 与 Capstone 运行会在 `docs/verification/status.md` 明确记录为 `SKIPPED + 原因`，而不是伪报 PASS。
-### 标签作用域约定
-
-为了避免每个 Lab 步骤重复堆叠标签：一个小节开头出现的事实标签，作用于该小节中随后明确属于同一论断的命令、图表、代码定位和说明，直到下一条事实标签或下一层同级标题为止。纯练习要求、验收题和故障注入默认属于 `【教学模型】`；它们引用的真实 API/路径仍必须由同节的 `【源码事实】` 或 `【官方事实】` 支撑。任何跨越该作用域的新事实都必须重新标记。
+GitHub Pages 使用仓库子路径 `/deepseek-harness-cn-course/`，推送 `main` 后由 Actions 自动验证、构建和部署。

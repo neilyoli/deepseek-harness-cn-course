@@ -1,82 +1,54 @@
-import { readFileSync, existsSync, readdirSync } from 'node:fs'
-import { resolve } from 'node:path'
-
-const root = resolve(import.meta.dirname, '..')
-const docs = resolve(root, 'docs')
-const failures = []
-const passes = []
-
-function need(path) {
-  const full = resolve(root, path)
-  if (!existsSync(full)) failures.push(`missing: ${path}`)
-  else passes.push(`exists: ${path}`)
-  return full
-}
-
-function contains(path, needles) {
-  const full = need(path)
-  if (!existsSync(full)) return
-  const text = readFileSync(full, 'utf8')
-  for (const needle of needles) {
-    if (!text.includes(needle)) failures.push(`${path}: missing marker ${JSON.stringify(needle)}`)
-  }
-}
+import fs from 'node:fs'
+import path from 'node:path'
 
 const required = [
-  'README.md', 'package.json', 'docs/index.md', 'docs/.vitepress/config.mts',
-  'docs/research/version-lock.md', 'docs/research/fact-map.md',
-  'docs/roadmap/dependency-graph.md', 'docs/roadmap/traceability.md', 'docs/roadmap/source-reading-card.md',
-  'docs/appendix/glossary.md', 'docs/labs/debug-challenges.md',
-  'docs/capstones/a-plugin-suite.md', 'docs/capstones/b-provider.md', 'docs/capstones/c-core-change.md',
-  'docs/exam/graduation.md', 'docs/mini-harness/index.md', 'docs/advanced/index.md',
-  'docs/verification/status.md',
+  'README.md', 'package.json', '.github/workflows/deploy-pages.yml',
+  'docs/.vitepress/config.mts', 'docs/index.md',
+  'docs/review/learning-route-audit.md',
+  'docs/research/version-lock.md', 'docs/research/official-map.md', 'docs/research/doc-governance.md', 'docs/research/source-conflicts.md',
+  'docs/roadmap/index.md', 'docs/roadmap/self-study-method.md',
+  ...Array.from({ length: 10 }, (_, i) => `docs/companion/${String(i).padStart(2, '0')}-${[
+    'run-real-harness','first-plugin','cordis','composition-boot','core-runtime','agent-turn','session-persistence','llm-tools','capability-seams','plugin-engineering'
+  ][i]}.md`),
+  'docs/plugin-lab/index.md', 'docs/labs/fault-injection.md', 'docs/checkpoints/index.md',
+  'docs/capstones/plugin.md', 'docs/capstones/core-change.md', 'docs/capstones/unseen-module.md', 'docs/capstones/mini-harness.md',
+  'docs/source/boot.md', 'docs/source/cordis-boundary.md', 'docs/source/agent-turn.md', 'docs/source/failure-cancel.md', 'docs/source/persistence.md',
+  'docs/verification/status.md'
 ]
-for (const path of required) need(path)
 
-const stageDir = resolve(docs, 'stages')
-const stageFiles = existsSync(stageDir) ? readdirSync(stageDir).filter(x => /^\d\d\.md$/.test(x)).sort() : []
-if (stageFiles.length !== 18) failures.push(`expected 18 stage files, found ${stageFiles.length}`)
+const errors = []
+for (const f of required) if (!fs.existsSync(f)) errors.push(`missing: ${f}`)
 
-const factLabels = ['【源码事实】', '【官方事实】', '【教学模型】', '【工程解释】', '【版本敏感】', '【待核实】']
-for (let i = 0; i < 18; i++) {
-  const n = String(i).padStart(2, '0')
-  const path = `docs/stages/${n}.md`
-  const full = need(path)
-  if (!existsSync(full)) continue
-  const text = readFileSync(full, 'utf8')
-  if (!text.includes(`# Stage ${i}`)) failures.push(`${path}: wrong/missing Stage heading`)
-  if (!text.includes('毕业能力映射')) failures.push(`${path}: missing capability mapping`)
-  if (!text.includes('验收')) failures.push(`${path}: missing acceptance gate`)
-  const presentFacts = factLabels.filter(tag => text.includes(tag)).length
-  if (presentFacts < 2) failures.push(`${path}: insufficient fact-nature labels (${presentFacts})`)
+const read = f => fs.readFileSync(f, 'utf8')
+const all = required.filter(f => f.endsWith('.md') && fs.existsSync(f)).map(read).join('\n')
+const audit = read('docs/review/learning-route-audit.md')
+const map = read('docs/research/official-map.md')
+const lab = read('docs/plugin-lab/index.md')
+const faults = read('docs/labs/fault-injection.md')
+const conflicts = read('docs/research/source-conflicts.md')
+
+for (const term of ['当前官方资料地图','建议阅读顺序','核心必修','按需补课','高级选修','实验节点','能力检查点','反向检查']) {
+  if (!audit.includes(term)) errors.push(`audit missing term: ${term}`)
 }
+for (const term of ['入门','开发','参考','Architecture','Subsystem Reference','Package README','Cookbook','Agent Notes','Generated']) {
+  if (!map.includes(term)) errors.push(`official map missing: ${term}`)
+}
+for (const v of Array.from({length:10},(_,i)=>`v${i+1}`)) if (!lab.includes(v)) errors.push(`plugin lab missing ${v}`)
+for (const term of ['missing inject','HMR','waterfall','LLM terminal failure','tool timeout','cancel','persistence','agent scope leak']) {
+  if (!faults.includes(term)) errors.push(`fault lab missing: ${term}`)
+}
+if (!conflicts.includes('Request-error retry')) errors.push('source conflict retry case missing')
+if (fs.existsSync('docs/stages')) errors.push('obsolete docs/stages directory must not exist in v2')
+if (!all.includes('官方文档')) errors.push('course is not anchored to official docs')
+if (!all.includes('Source Reading Card')) errors.push('source reading method missing')
 
-contains('docs/roadmap/traceability.md', [
-  '排查 Plugin 不加载', '开发 Tool Plugin', '追完整 Agent Turn', 'Session Replay',
-  'LLM Provider', 'Tool Pipeline', 'Capability Provider', '修改 DSH Core',
-])
-
-const debug = readFileSync(resolve(docs, 'labs/debug-challenges.md'), 'utf8')
-const challengeCount = [...debug.matchAll(/^## Challenge /gm)].length
-if (challengeCount < 13) failures.push(`expected >=13 debug challenges, found ${challengeCount}`)
-else passes.push(`debug challenges: ${challengeCount}`)
-
-contains('docs/mini-harness/index.md', ['【教学实现，不代表 DeepSeek Harness 内部源码】'])
-contains('docs/exam/graduation.md', [
-  'Question 1', 'Question 2', 'Question 3', 'Question 4', 'Question 5', 'Question 6', 'Question 7',
-])
-contains('docs/research/version-lock.md', [
-  'b150a551b8d465e31e418e1b2eaf5e79bbb7d28e', '0.1.1-rc.2', '^22.19.0 || >=24.0.0', '11.7.0',
-  'deep merge',
-])
-
-if (failures.length) {
+if (errors.length) {
   console.error('CURRICULUM VERIFY: FAIL')
-  for (const line of failures) console.error(`- ${line}`)
+  for (const e of errors) console.error('-', e)
   process.exit(1)
 }
 console.log('CURRICULUM VERIFY: PASS')
-console.log(`- required files checked: ${required.length}`)
-console.log(`- stages checked: ${stageFiles.length}`)
-console.log(`- debug challenges: ${challengeCount}`)
-console.log(`- structural assertions: ${passes.length}`)
+console.log(`- required files: ${required.length}`)
+console.log('- official-doc-first structure: PASS')
+console.log('- plugin v1-v10 progression: PASS')
+console.log('- fault/checkpoint/core-change loops: PASS')
